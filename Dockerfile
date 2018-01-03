@@ -1,9 +1,13 @@
-FROM golang:onbuild AS builder
+FROM golang:onbuild AS build-env
 
-ADD . .
-RUN go build -o /app .
+ADD . /src
+WORKDIR /src
+RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o app .
 
 FROM alpine:latest
-COPY --from=builder /app /app
+# optional
+# RUN apk --no-cache add ca-certificates
+WORKDIR /srv/
+COPY --from=build-env /src/app /srv/
 EXPOSE 8080
-CMD ["/app"]
+CMD ["./app"]
