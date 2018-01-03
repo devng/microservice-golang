@@ -17,6 +17,7 @@ jobs:
         - go build -v ./...
         - go test -v ./...
         - goveralls -service=travis-ci
+        - bash <(curl -s https://codecov.io/bash)
 
     - stage: build
       script: docker build -t test/app .
