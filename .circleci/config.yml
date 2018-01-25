@@ -3,16 +3,29 @@ jobs:
   build:
     docker:
       - image: circleci/golang:latest
-    working_directory: /go/src/github.com/{{ORG_NAME}}/{{REPO_NAME}}
+    working_directory: /go/src/github.com/egymgmbh/microservice-golang
     steps:
+      # prepare environment
       - run: go get github.com/golang/lint/golint
-      #- run: go get github.com/golang/dep/cmd/dep
+      - run: go get github.com/golang/dep/cmd/dep
       - checkout
+      # install dependencies
       - run: dep ensure
-      - run: golint -set_exit_status $(go list ./...)
-      - run: go vet -v ./...
-      - run: go build -v ./...
-      - run: go test -v ./...
-      - run: go test -race -coverprofile=coverage.txt -covermode=atomic
+      # test
+      - run: golint   -set_exit_status $(go list ./... | grep -v /vendor/)
+      - run: go vet   -v               $(go list ./... | grep -v /vendor/)
+      - run: go build -v               $(go list ./... | grep -v /vendor/)
+      - run: go test  -v               $(go list ./... | grep -v /vendor/)
+      - run: |
+          echo "" > coverage.txt
+          for FNAME in $(go list ./... | grep -v vendor); do
+            go test -race -coverprofile=profile.out -covermode=atomic ${FNAME}
+            if [ -f profile.out ]; then
+              cat profile.out >> coverage.txt
+              rm profile.out
+            fi
+          done
       - run: bash <(curl -s https://codecov.io/bash)
+      # build
+      - setup_remote_docker
       - run: docker build -t test/app .
